@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Bus, User, Shield, Lock, Mail, Eye, EyeOff, ArrowLeft, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
 
 export default function RoleLoginForm() {
+  const navigate = useNavigate();
   const { selectedRoleForLogin, login, backToRoleSelection, demoUsers } = useAuth();
 
   const role = selectedRoleForLogin || 'customer';
@@ -30,14 +32,21 @@ export default function RoleLoginForm() {
     setTimeout(() => {
       login(role, { identifier, password });
       setIsLoading(false);
+      if (role === 'driver') {
+        navigate('/driver');
+      } else if (role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/home');
+      }
     }, 600);
   };
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between p-4 sm:p-8 relative overflow-hidden selection:bg-blue-600 selection:text-white">
       {/* Background Graphic Accents */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Bar with Back Button */}
       <header className="relative z-10 max-w-5xl mx-auto w-full flex items-center justify-between py-2">
@@ -59,11 +68,11 @@ export default function RoleLoginForm() {
         </div>
       </header>
 
-      {/* Center Layout: Split on Desktop / Centered Card */}
+      {/* Center Layout */}
       <main className="relative z-10 max-w-4xl mx-auto w-full my-auto py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
           
-          {/* Left Column: Branding Illustration & Info (Desktop) */}
+          {/* Left Column (Desktop) */}
           <div className="md:col-span-5 space-y-6 hidden md:block">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-extrabold uppercase tracking-wider">
               {role === 'admin' ? 'SYSTEM MANAGEMENT' : role === 'driver' ? 'TELEMETRY DISPATCH' : 'PASSENGER HUB'}
@@ -86,16 +95,15 @@ export default function RoleLoginForm() {
               </div>
               <div className="flex items-center gap-2 font-bold text-slate-800">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                <span>Supabase Auth & Role Authorization Ready</span>
+                <span>Role-Based Access Authorization</span>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Dedicated Login Card */}
+          {/* Right Column: Login Card */}
           <div className="md:col-span-7">
             <div className="p-8 sm:p-10 rounded-3xl bg-white border border-slate-200/90 shadow-card-soft space-y-6 relative">
 
-              {/* Security Badge for Admin */}
               {role === 'admin' && (
                 <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold w-full justify-center">
                   <ShieldCheck className="w-4 h-4 text-indigo-600" />
@@ -103,7 +111,6 @@ export default function RoleLoginForm() {
                 </div>
               )}
 
-              {/* Form Title & Subtitle */}
               <div className="text-center sm:text-left">
                 <h3 className="text-2xl font-black text-slate-900">
                   {role === 'customer' && "Welcome Back"}
@@ -120,7 +127,6 @@ export default function RoleLoginForm() {
               {/* Login Form */}
               <form onSubmit={handleSubmit} className="space-y-4 text-xs">
                 
-                {/* Field 1: Email / Phone / Driver ID */}
                 <div>
                   <label className="font-bold text-slate-700 block mb-1.5">
                     {role === 'customer' && "Email / Phone Number"}
@@ -144,7 +150,6 @@ export default function RoleLoginForm() {
                   </div>
                 </div>
 
-                {/* Field 2: Password with Eye Toggle */}
                 <div>
                   <label className="font-bold text-slate-700 block mb-1.5">Password</label>
                   <div className="relative">
@@ -167,7 +172,6 @@ export default function RoleLoginForm() {
                   </div>
                 </div>
 
-                {/* Options: Remember Me & Forgot Password */}
                 <div className="flex items-center justify-between text-xs pt-1">
                   {role === 'customer' && (
                     <label className="flex items-center gap-2 cursor-pointer font-medium text-slate-600">
@@ -186,11 +190,10 @@ export default function RoleLoginForm() {
                   </a>
                 </div>
 
-                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm tracking-wider shadow-electric-glow transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-extrabold text-xs sm:text-sm tracking-wider shadow-electric-glow transition-all flex items-center justify-center gap-2 touch-target"
                 >
                   {isLoading ? (
                     <span>Signing in...</span>
@@ -199,18 +202,18 @@ export default function RoleLoginForm() {
                   )}
                 </button>
 
-                {/* Customer Account Creation Link */}
+                {/* Customer Account Creation Link - FIXED TO NAVIGATE TO /register */}
                 {role === 'customer' && (
                   <div className="text-center pt-2 text-xs text-slate-500">
                     Don't have an account?{' '}
-                    <button type="button" onClick={fillDemoCredentials} className="text-blue-600 font-bold hover:underline">
+                    <Link to="/register" className="text-blue-600 font-extrabold hover:underline">
                       Create Account
-                    </button>
+                    </Link>
                   </div>
                 )}
               </form>
 
-              {/* Discrete Demo Credentials Shortcut Button */}
+              {/* Demo Credentials Shortcut */}
               <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                 <span className="text-[11px] text-slate-400 font-medium">Testing in Demo Mode?</span>
                 <button
@@ -229,7 +232,6 @@ export default function RoleLoginForm() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="relative z-10 max-w-5xl mx-auto w-full text-center py-2 text-xs text-slate-400">
         © 2026 CITYRIDE • Unified Mobility Platform
       </footer>

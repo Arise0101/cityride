@@ -1,31 +1,46 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, User, Sparkles, Navigation, MapPin, Bus, Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useApp } from '../../context/AppContext';
+import { Bot, Send, User, Sparkles, Navigation, MapPin } from 'lucide-react';
 import { askCityRideAIAssistant } from '../../services/aiService';
 
 export default function CityRideAIAssistant() {
+  const navigate = useNavigate();
+  const { buses, stops, routes, setSelectedBusForTracking } = useApp();
+
   const [messages, setMessages] = useState([
     {
       id: 1,
       sender: 'ai',
-      text: "👋 Hi! I'm **CityRide AI**, your Tumakuru transit assistant.\n\nAsk me anything about bus routes, live ETAs, nearest stops, or transfer directions!",
+      text: "👋 Hi! I'm **CityRide AI**, your Tumakuru transit assistant.\n\nAsk me to find the nearest bus stop, calculate walking routes, or check live bus ETAs!",
       timestamp: 'Just now'
     }
   ]);
   const [inputQuery, setInputQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
   const chatEndRef = useRef(null);
+
+  // Request GPS location for map actions
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => setUserLocation({ lat: 13.3400, lng: 77.1000 })
+      );
+    }
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  // Useful quick question chips requested in specification
   const sampleQuestions = [
     "Find nearest bus stop",
     "How do I reach Bengaluru?",
+    "Show bus 102",
     "When is the next bus?",
-    "Show live buses",
-    "Find a route"
+    "What is the capital of India?"
   ];
 
   const handleSend = async (queryToSend) => {
@@ -45,14 +60,23 @@ export default function CityRideAIAssistant() {
     setIsLoading(true);
 
     try {
-      // Pass full conversation history to maintain context
-      const responseText = await askCityRideAIAssistant(query, newMessages);
+      const res = await askCityRideAIAssistant(query, newMessages, { userLocation, stops, buses, routes });
+
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         sender: 'ai',
-        text: responseText,
+        text: res.answer || res,
+        action: res.action || null,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }]);
+
+      // Execute AI Map Action if triggered
+      if (res.action) {
+        if (res.action.type === 'SHOW_BUS') {
+          const targetBus = buses.find(b => b.busNumber.toLowerCase().includes(res.action.busNumber.toLowerCase()));
+          if (targetBus) setSelectedBusForTracking(targetBus);
+        }
+      }
     } catch {
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
@@ -78,12 +102,20 @@ export default function CityRideAIAssistant() {
               <h2 className="text-lg font-black text-white">CityRide AI</h2>
               <span className="px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 text-[10px] font-bold border border-indigo-500/30 flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-indigo-400" />
-                TRANSIT ASSISTANT
+                SMART ASSISTANT
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5 font-medium">Real-time route directions, live ETAs, and general knowledge</p>
+            <p className="text-xs text-slate-300 mt-0.5 font-medium">Your intelligent transportation & route navigation guide</p>
           </div>
         </div>
+
+        <button
+          onClick={() => navigate('/map')}
+          className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-electric-glow flex items-center gap-1.5 transition-all touch-target"
+        >
+          <Navigation className="w-4 h-4" />
+          <span>Open Full Map</span>
+        </button>
       </div>
 
       {/* Main Chat Container */}
@@ -97,9 +129,7 @@ export default function CityRideAIAssistant() {
             >
               {/* Avatar Icon */}
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                msg.sender === 'user'
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-slate-900 text-white shadow-sm'
+                msg.sender === 'user' ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-900 text-white shadow-sm'
               }`}>
                 {msg.sender === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4 text-indigo-400" />}
               </div>
@@ -111,6 +141,20 @@ export default function CityRideAIAssistant() {
                   : 'bg-slate-900 text-slate-100 border border-slate-800 rounded-2xl rounded-tl-none whitespace-pre-wrap'
               }`}>
                 {msg.text}
+
+                {/* AI Action Button inside chat */}
+                {msg.action && (
+                  <div className="mt-3 pt-2 border-t border-slate-800 flex items-center gap-2">
+                    <button
+                      onClick={() => navigate('/map')}
+                      className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold flex items-center gap-1.5 transition-colors"
+                    >
+                      <Navigation className="w-3.5 h-3.5" />
+                      <span>View Route on Map</span>
+                    </button>
+                  </div>
+                )}
+
                 <div className={`text-[10px] mt-1.5 font-semibold ${msg.sender === 'user' ? 'text-blue-200 text-right' : 'text-slate-400'}`}>
                   {msg.timestamp}
                 </div>
@@ -125,7 +169,7 @@ export default function CityRideAIAssistant() {
                 <Bot className="w-4 h-4 text-indigo-400 animate-spin" />
               </div>
               <div className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs text-slate-300 flex items-center gap-2.5 shadow-sm">
-                <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping"></span>
+                <span className="w-2 h-2 rounded-full bg-indigo-400 animate-ping" />
                 <span className="font-medium">CityRide AI is thinking...</span>
               </div>
             </div>
@@ -154,7 +198,7 @@ export default function CityRideAIAssistant() {
             value={inputQuery}
             onChange={(e) => setInputQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ask CityRide AI (e.g. 'nearest bus stop' or 'route to Bengaluru')..."
+            placeholder="Ask CityRide anything (e.g. 'nearest bus stop' or 'capital of India')..."
             className="flex-1 px-4 py-3 min-h-[44px] rounded-xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 text-xs sm:text-sm font-medium focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
           />
           <button
