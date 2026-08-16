@@ -3,6 +3,7 @@
  * Powered by Gemini API, OSRM Map Routing Engine, and Structured Action Dispatching
  */
 import { findNearestStopAndRoute, fetchOSRMRoute } from '../utils/routingEngine';
+import { apiUrl } from '../config/apiConfig';
 
 export async function askCityRideAIAssistant(question, history = [], context = {}) {
   const q = (question || '').toLowerCase().trim();
@@ -91,7 +92,7 @@ export async function askCityRideAIAssistant(question, history = [], context = {
 
   // Default Gemini API Proxy or Fallback Guidance
   try {
-    const response = await fetch('http://localhost:5000/api/ai/assistant', {
+    const response = await fetch(apiUrl('/api/ai/assistant'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, history, context })
